@@ -7,6 +7,9 @@ Create the `/config/config.json` file with the following format:
 ```
 {
     "deviceId": "79A6FB83-2D23-43FD-ACC3-3A756D392CFC",
+    "switches": {
+        "family_room": "39871956563f4d2ab6616ffc62e0b0ca"
+    }
 }
 ```
 
