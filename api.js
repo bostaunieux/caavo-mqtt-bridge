@@ -1,7 +1,7 @@
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+const axios = require('axios');
+const uuidv4 = require('uuid').v4;
 
-export default class Api {
+module.exports = class Api {
 
     constructor({deviceId}) {
         this.deviceId = deviceId;

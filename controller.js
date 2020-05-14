@@ -1,9 +1,9 @@
-import throttle from 'lodash/throttle';
-import kebabCase from 'lodash/kebabCase';
-import mqtt from 'mqtt';
+const throttle = require('lodash/throttle');
+const snakeCase = require('lodash/snakeCase');
+const mqtt = require('mqtt');
 
-import Api from './api.js';
-import appConfig from '/config/config.json';
+const Api = require('./api');
+const appConfig = require('/config/config.json');
 
 const client = mqtt.connect(process.env.MQTT_HOST, {
   username: process.env.MQTT_USER, 
@@ -29,16 +29,16 @@ client.on('connect', () => {
 
   client.publish('caavo/availability', 'online', {qos: 1, retain: true});
 
-  client.subscribe('caavo/living-room/update-state');
-  client.subscribe('caavo/living-room/command/*', {qos: 2});
+  client.subscribe('caavo/living_room/update_state');
+  client.subscribe('caavo/living_room/command/*', {qos: 2});
 });
 
 client.on('message', async (topic, message) => {
 
   switch (topic) {
-    case 'caavo/living-room/update-state':
-      return await fetchHubState();
-    case 'caavo/living-room/command':
+    case 'caavo/living_room/update_state':
+      return await fetchHubState({switchId: appConfig.switches['living_room']});
+    case 'caavo/living_room/command':
       const command = JSON.parse(+(message.toString()));
       return await sendCommand(command);
   }
@@ -46,10 +46,10 @@ client.on('message', async (topic, message) => {
   console.warn('No handler for topic: %s', topic);
 });
 
-const fetchHubState = throttle(async () => {
+const fetchHubState = throttle(async ({switchId}) => {
   console.info('Processing request to get hub state');
 
-  const hubState = await api.getState();
+  const hubState = await api.getState({switchId});
   
   hubState && notifyStateChange(hubState);
 }, 10000);
@@ -74,5 +74,5 @@ const sendCommand = async ({action}) => {
  */
 const notifyStateChange = (hubState) => {
   
-  client.publish(`caavo/${kebabCase(hubState.switchName)}/state`, JSON.stringify({...hubState}), {retain: true});
+  client.publish(`caavo/${snakeCase(hubState.switchName)}/state`, JSON.stringify({...hubState}), {retain: true});
 };
