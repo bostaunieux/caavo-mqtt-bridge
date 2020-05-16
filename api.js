@@ -136,7 +136,7 @@ module.exports = class Api {
      * @param {string} token - Auth token
      * @param {string} switchId - Id of switch to receive action
      * @param {string} action - Command action
-     * @param {string} longPress -Is action a long press
+     * @param {string} longPress - Is action a long press
      */
     async requestSendCommand({token, switchId, action, longPress}) {
         const requestId = uuidv4().toUpperCase();

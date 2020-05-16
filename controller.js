@@ -3,7 +3,7 @@ const snakeCase = require('lodash/snakeCase');
 const mqtt = require('mqtt');
 
 const Api = require('./api');
-const appConfig = require('/config/config.json');
+const appConfig = require('./config.json');
 
 const client = mqtt.connect(process.env.MQTT_HOST, {
   username: process.env.MQTT_USER, 
@@ -30,7 +30,7 @@ client.on('connect', () => {
   client.publish('caavo/availability', 'online', {qos: 1, retain: true});
 
   client.subscribe('caavo/living_room/update_state');
-  client.subscribe('caavo/living_room/command/*', {qos: 2});
+  client.subscribe('caavo/living_room/command', {qos: 2});
 });
 
 client.on('message', async (topic, message) => {
@@ -39,8 +39,8 @@ client.on('message', async (topic, message) => {
     case 'caavo/living_room/update_state':
       return await fetchHubState({switchId: appConfig.switches['living_room']});
     case 'caavo/living_room/command':
-      const command = JSON.parse(+(message.toString()));
-      return await sendCommand(command);
+      const {action} = JSON.parse(message.toString());
+      return await sendCommand({action, switchId: appConfig.switches['living_room']});
   }
 
   console.warn('No handler for topic: %s', topic);
@@ -59,12 +59,16 @@ const fetchHubState = throttle(async ({switchId}) => {
  * 
  * @param {{action: {string}}}} request 
  */
-const sendCommand = async ({action}) => {
-  console.info('Processing request to send command');
+const sendCommand = async ({action, switchId}) => {
+  console.info(`Processing request to send command with action: ${action}`);
 
-  const response = await api.sendCommand({action});
-
-  response && notifyStateChange(response);
+  try {
+    await api.sendCommand({action, switchId});
+    setTimeout(() => fetchHubState({switchId}), 5000);
+    setTimeout(() => fetchHubState({switchId}), 10000);
+  } catch (error) {
+    console.error(`Unable to perform command, action: ${action}, error: ${error}`);
+  }
 };
 
 /**
