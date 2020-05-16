@@ -3,7 +3,7 @@ const snakeCase = require('lodash/snakeCase');
 const mqtt = require('mqtt');
 
 const Api = require('./api');
-const appConfig = require('./config.json');
+const appConfig = require('/config/config.json');
 
 const client = mqtt.connect(process.env.MQTT_HOST, {
   username: process.env.MQTT_USER, 
