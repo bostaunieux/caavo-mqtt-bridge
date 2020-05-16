@@ -12,6 +12,6 @@
     "uuid": "^8.0.0"
   },
   "scripts": {
-    "start": "node test.js"
+    "start": "node controller.js"
   }
 }
