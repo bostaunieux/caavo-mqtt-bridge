@@ -27,6 +27,10 @@ module.exports = class Api {
         };
     }
 
+    /**
+     * Fetch the current state of the given switch
+     * @param {{switchId: {string}}} param 
+     */
     async getState({switchId}) {
         try {
             const token = await this.getToken();
@@ -37,11 +41,15 @@ module.exports = class Api {
         }
     }
 
+    /**
+     * Send the following action to the provided switch
+     * @param {{action: {string}, switchId: {string}}} param 
+     */
     async sendCommand({action, switchId}) {
         try {
             const token = await this.getToken();
             const normalizedAction = this.actionMap[action];
-            const longPress = action === 'PowerOff';
+            const longPress = action === 'power_off';
 
             if (!normalizedAction) {
                 throw new Error(`Unrecognized action: ${action}`);
@@ -54,6 +62,9 @@ module.exports = class Api {
         }
     }
 
+    /**
+     * Fetch an access token if one already isn't 
+     */
     async getToken() {
         const now = new Date().getTime();
     
@@ -117,9 +128,6 @@ module.exports = class Api {
 
         const response = await axios.get(`https://api.caavo.com/clients/switches/state?switch_id=${switchId}`, requestConfig);
 
-        console.debug('Raw status response:');
-        console.debug(response.data);
-
         return this.formatStateResponse(response.data);
     }
 
@@ -144,9 +152,6 @@ module.exports = class Api {
             'switch_id': switchId,
             'commands': `{"sub_type":"remote_user","source":"olive","request_id":"${requestId}","version":"1.0.0","type":"control","payload":{"command":"control","data":{"op":"${action}","is_long_press":${longPress}}}}`
         }, requestConfig);
-
-        console.debug('Raw send command response:');
-        console.debug(response);
     }
 
     /**

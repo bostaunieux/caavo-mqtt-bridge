@@ -1,7 +1,7 @@
 {
   "name": "@bostaunieux/caavo-mqtt-bridge",
   "version": "0.1.0",
-  "description": "Node service for controlling a a caavo hub",
+  "description": "Node service for controlling a caavo hub",
   "author": "bostaunieux",
   "license": "ISC",
   "dependencies": {
