@@ -1,5 +1,6 @@
 const axios = require('axios');
 const uuidv4 = require('uuid').v4;
+const snakeCase = require('lodash/snakeCase');
 
 module.exports = class Api {
 
@@ -37,6 +38,19 @@ module.exports = class Api {
             return await this.requestStatus({token, switchId});
         } catch (error) {
             console.error('Failed fetching state', error);
+            return null;
+        }
+    }
+
+    /**
+     * Find all available switches
+     */
+    async findSwitches() {
+        try {
+            const token = await this.getToken();
+            return await this.requestSwitches({token});
+        } catch (error) {
+            console.error('Failed fetching switches', error);
             return null;
         }
     }
@@ -134,6 +148,27 @@ module.exports = class Api {
     /**
      * 
      * @param {string} token - Auth token
+     * @param {string} switchId - Switch id
+     * @return {{id: {string}, name: {string}, friendlyName: {string}, macAddress: {string}}}
+     */
+    async requestSwitches({token}) {
+        console.debug('Requesting switch list');
+
+        const headers = {
+            'Authorization': `Token token=${token}`,
+            'User-Agent': 'Caavo Olive v11.3',
+            'Content-Type': 'application/json'
+        };
+        const requestConfig = {headers};
+
+        const response = await axios.get('https://api.caavo.com/clients/users/switches', requestConfig);
+
+        return this.formatSwitchResponse(response.data);
+    }
+
+    /**
+     * 
+     * @param {string} token - Auth token
      * @param {string} switchId - Id of switch to receive action
      * @param {string} action - Command action
      * @param {string} longPress - Is action a long press
@@ -165,5 +200,19 @@ module.exports = class Api {
             powerState: response.general_config.power_state,
             updatedAt: response.updated_at
         };
+    }
+
+    /**
+     * 
+     * @param {[]} response Switch list response
+     */
+    formatSwitchResponse(response) {
+
+        return (response || []).map(entry => ({
+            id: entry.uuid,
+            friendlyName: entry.friendly_name,
+            name: snakeCase(entry.friendly_name),
+            macAddress: entry.mac_ethernet
+        }));
     }
 }

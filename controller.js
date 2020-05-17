@@ -3,7 +3,7 @@ const snakeCase = require('lodash/snakeCase');
 const mqtt = require('mqtt');
 
 const Api = require('./api');
-const appConfig = require('/config/config.json');
+const appConfig = require(`${process.env.CONF_DIR || '/config'}/config.json`);
 
 const client = mqtt.connect(process.env.MQTT_HOST, {
   username: process.env.MQTT_USER, 
@@ -20,27 +20,53 @@ const api = new Api({
   deviceId: appConfig.deviceId,
 });
 
+// reference to any hubs found
+let hubsByName;
+
 client.on('error', (error) => {
   console.error(error);
 });
 
-client.on('connect', () => {
+client.on('connect', async () => {
   console.info('Connected to home automation mqtt broker');
 
   client.publish('caavo/availability', 'online', {qos: 1, retain: true});
 
-  client.subscribe('caavo/living_room/update_state');
-  client.subscribe('caavo/living_room/command', {qos: 2});
+  const hubs = await api.findSwitches();
+  if (hubs.length === 0) {
+    throw new Error('Unable to find any Caavo switches');
+  }
+
+  hubs.forEach((hub) => {
+    console.info(`Subscribing to ${hub.friendlyName} hub as caavo/${hub.name}/+`);
+
+    client.subscribe(`caavo/${hub.name}/update_state`);
+    client.subscribe(`caavo/${hub.name}/command`, {qos: 2});
+
+  });  
+
+  hubsByName = hubs.reduce((acc, hub) => {
+    acc[hub.name] = hub;
+    return acc;
+  }, {});
 });
 
 client.on('message', async (topic, message) => {
 
+  const [, hubName] = topic.split('/');
+  const hub = hubsByName[hubName];
+
+  if (!hub) {
+    console.info(`Unable to process topic: ${topic}, hub not recognized`);
+    return;
+  }
+
   switch (topic) {
-    case 'caavo/living_room/update_state':
-      return await fetchHubState({switchId: appConfig.switches['living_room']});
-    case 'caavo/living_room/command':
+    case `caavo/${hubName}/update_state`:
+      return await fetchHubState({switchId: hub.id});
+    case `caavo/${hubName}/command`:
       const {action} = JSON.parse(message.toString());
-      return await sendCommand({action, switchId: appConfig.switches['living_room']});
+      return await sendCommand({action, switchId: hub.id});
   }
 
   console.warn('No handler for topic: %s', topic);
