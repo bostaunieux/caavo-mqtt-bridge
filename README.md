@@ -19,6 +19,11 @@ Then when define the following env vars
 | MQTT_USER | Yes	   | Mqtt password    |
 | CONF_DIR  | No	   | Optional directory where the config.json file is located. Defaults to '/config' |
 
+Start the service with
+```
+node controller.js
+```
+
 ## Docker tagging steps
 
 1. Build tag
