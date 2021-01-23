@@ -5,11 +5,11 @@
   "author": "bostaunieux",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "dotenv": "^8.2.0",
-    "lodash": "^4.17.15",
-    "mqtt": "^4.0.1",
-    "uuid": "^8.0.0"
+    "lodash": "^4.17.20",
+    "mqtt": "^4.2.6",
+    "uuid": "^8.3.2"
   },
   "scripts": {
     "start": "node controller.js"
