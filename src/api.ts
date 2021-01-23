@@ -40,10 +40,16 @@ interface StateResponse {
   updated_at: string;
 }
 
+interface SwitchState {
+    mac: string;
+    switchID: string;
+    caavoName: string;
+    powerState: 'ON' | 'OFF';
+    lastUpdated: string;
+}
+
 interface SwitchResponse {
-  uuid: string;
-  friendly_name: string;
-  mac_ethernet: string;
+  state: SwitchState;
 }
 
 interface RegisterResponse {
@@ -213,7 +219,7 @@ export default class Api {
     };
     const requestConfig = { headers };
 
-    const response = await axios.get<SwitchResponse[]>("https://api.caavo.com/clients/users/switches", requestConfig);
+    const response = await axios.get<SwitchResponse[]>("https://api.caavo.com/clients/switches/box_config/all", requestConfig);
 
     return this.formatSwitchResponse(response.data);
   }
@@ -259,10 +265,10 @@ export default class Api {
    */
   private formatSwitchResponse(response: SwitchResponse[]): Switch[] {
     return (response || []).map((entry) => ({
-      id: entry.uuid,
-      friendlyName: entry.friendly_name,
-      name: snakeCase(entry.friendly_name),
-      macAddress: entry.mac_ethernet,
+      id: entry.state.switchID,
+      friendlyName: entry.state.caavoName,
+      name: snakeCase(entry.state.caavoName),
+      macAddress: entry.state.mac,
     }));
   }
 }

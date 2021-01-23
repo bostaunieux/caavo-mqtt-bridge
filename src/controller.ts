@@ -17,7 +17,7 @@ const initialize = async () => {
     const buffer = await promises.readFile(CONF_DIR + "/config.json");
     appConfig = JSON.parse(buffer.toString());
   } catch (error) {
-    console.log("Could not read config file at path: %s, exiting", CONF_DIR);
+    console.log("Could not read config.json file at path: %s, exiting", CONF_DIR);
     process.exit(1);
   }
 
@@ -50,7 +50,8 @@ const initialize = async () => {
 
     const hubs: Switch[] = (await api.findSwitches()) ?? [];
     if (hubs.length === 0) {
-      throw new Error("Unable to find any Caavo switches");
+      console.error('Unable to find any Caavo switches')
+      process.exit(1);
     }
 
     hubs.forEach((hub) => {
