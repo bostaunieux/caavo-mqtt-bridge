@@ -1,5 +1,7 @@
 # caavo-mqtt-bridge
 
+This project creates a service to connect a Caavo control center hub to an MQTT broker. Messages can be published on the broker to send commands to the Caavo hub. In response, the state of the hub will be read after a command is performed and published on a separate topic.
+
 ## Setup
 
 Create a `config.json` file with the following format:
@@ -14,8 +16,16 @@ Create a `config.json` file with the following format:
 Then when define the following env vars
 
 | Variable  | Required | Description      |
+<<<<<<< HEAD
 | ----------| -------- | -----------------
 | CONF_DIR  | No	   | Optional directory where the config.json file is located. Defaults to '/config' |
+=======
+| ----------| -------- | ----------------
+| MQTT_HOST | Yes      | Mqtt broker host |
+| MQTT_USER | Yes      | Mqtt user        |
+| MQTT_USER | Yes      | Mqtt password    |
+| CONF_DIR  | No       | Optional directory where the config.json file is located. Defaults to '/config' |
+>>>>>>> 8d5aa8015fa584946432a5e920963431e868275d
 
 
 ## Running the service
@@ -31,14 +41,16 @@ Then when define the following env vars
 	CONF_DIR=/etc/caavo/ npm start
 	```
 
-## Docker tagging steps
+## Testing docker locally
 
 1. Build tag
 	```
 	docker build -t bostaunieux/caavo-mqtt-bridge:latest .
 	docker build -t bostaunieux/caavo-mqtt-bridge:1.1.6 .
+	
+	docker run bostaunieux/caavo-mqtt-bridge:latest
 	```
-2. Publish tag
+3. Optionally publish tag
 	```
 	docker push bostaunieux/caavo-mqtt-bridge:latest
 	docker push bostaunieux/caavo-mqtt-bridge:1.1.6
