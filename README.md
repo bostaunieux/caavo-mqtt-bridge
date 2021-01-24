@@ -2,27 +2,34 @@
 
 ## Setup
 
-Create the `/config/config.json` file with the following format:
+Create a `config.json` file with the following format:
 
 ```
 {
-    "deviceId": "79A6FB83-2D23-43FD-ACC3-3A756D392CFC"
+    "deviceId": "79A6FB83-2D23-43FD-ACC3-3A756D392CFC",
+	"mqttHost": "mqtt://[username:password@]192.168.1.5
 }
 ```
 
 Then when define the following env vars
 
 | Variable  | Required | Description      |
-| ----------| -------- | ----------------
-| MQTT_HOST | Yes      | Mqtt broker host |
-| MQTT_USER | Yes	   | Mqtt user        |
-| MQTT_USER | Yes	   | Mqtt password    |
+| ----------| -------- | -----------------
 | CONF_DIR  | No	   | Optional directory where the config.json file is located. Defaults to '/config' |
 
-Start the service with
-```
-node controller.js
-```
+
+## Running the service
+1. Compile 
+	```
+	npm run build
+	```
+2. Start the service
+	```
+	npm start
+
+	# with optional config dir
+	CONF_DIR=/etc/caavo/ npm start
+	```
 
 ## Docker tagging steps
 

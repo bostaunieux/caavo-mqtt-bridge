@@ -41,11 +41,11 @@ interface StateResponse {
 }
 
 interface SwitchState {
-    mac: string;
-    switchID: string;
-    caavoName: string;
-    powerState: 'ON' | 'OFF';
-    lastUpdated: string;
+  mac: string;
+  switchID: string;
+  caavoName: string;
+  powerState: "ON" | "OFF";
+  lastUpdated: string;
 }
 
 interface SwitchResponse {
@@ -219,7 +219,10 @@ export default class Api {
     };
     const requestConfig = { headers };
 
-    const response = await axios.get<SwitchResponse[]>("https://api.caavo.com/clients/switches/box_config/all", requestConfig);
+    const response = await axios.get<SwitchResponse[]>(
+      "https://api.caavo.com/clients/switches/box_config/all",
+      requestConfig
+    );
 
     return this.formatSwitchResponse(response.data);
   }

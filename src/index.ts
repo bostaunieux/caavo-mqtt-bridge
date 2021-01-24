@@ -6,6 +6,7 @@ import Api, { SendCommand, HubState, Switch } from "./api";
 
 interface AppConfig {
   deviceId: string;
+  mqttHost: string;
 }
 
 const CONF_DIR = process.env.CONF_DIR ?? "/config";
@@ -21,9 +22,7 @@ const initialize = async () => {
     process.exit(1);
   }
 
-  const client = mqtt.connect(process.env.MQTT_HOST, {
-    username: process.env.MQTT_USER,
-    password: process.env.MQTT_PASS,
+  const client = mqtt.connect(appConfig.mqttHost, {
     will: {
       topic: "caavo/availability",
       payload: "offline",
@@ -50,7 +49,7 @@ const initialize = async () => {
 
     const hubs: Switch[] = (await api.findSwitches()) ?? [];
     if (hubs.length === 0) {
-      console.error('Unable to find any Caavo switches')
+      console.error("Unable to find any Caavo switches");
       process.exit(1);
     }
 
@@ -88,6 +87,8 @@ const initialize = async () => {
     console.info("Processing request to get hub state");
 
     const hubState = await api.getState({ switchId });
+
+    console.info("Updating hub state: %s", hubState);
 
     hubState && notifyStateChange(hubState);
   }, 10000);
