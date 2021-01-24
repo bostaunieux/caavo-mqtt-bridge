@@ -9,23 +9,15 @@ Create a `config.json` file with the following format:
 ```
 {
     "deviceId": "79A6FB83-2D23-43FD-ACC3-3A756D392CFC",
-	"mqttHost": "mqtt://[username:password@]192.168.1.5
+    "mqttHost": "mqtt://[username:password@]192.168.1.5
 }
 ```
 
 Then when define the following env vars
 
 | Variable  | Required | Description      |
-<<<<<<< HEAD
 | ----------| -------- | -----------------
 | CONF_DIR  | No	   | Optional directory where the config.json file is located. Defaults to '/config' |
-=======
-| ----------| -------- | ----------------
-| MQTT_HOST | Yes      | Mqtt broker host |
-| MQTT_USER | Yes      | Mqtt user        |
-| MQTT_USER | Yes      | Mqtt password    |
-| CONF_DIR  | No       | Optional directory where the config.json file is located. Defaults to '/config' |
->>>>>>> 8d5aa8015fa584946432a5e920963431e868275d
 
 
 ## Running the service
