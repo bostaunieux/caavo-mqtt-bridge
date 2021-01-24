@@ -42,6 +42,10 @@ Then when define the following env vars
 	
 	docker run bostaunieux/caavo-mqtt-bridge:latest
 	```
+2. Run tag
+	```
+	docker run -v '/local/path/to/config':'/config':'ro'  bostaunieux/caavo-mqtt-bridge:latest
+	```	
 3. Optionally publish tag
 	```
 	docker push bostaunieux/caavo-mqtt-bridge:latest
