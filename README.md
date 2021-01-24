@@ -9,7 +9,7 @@ Create a `config.json` file with the following format:
 ```
 {
     "deviceId": "79A6FB83-2D23-43FD-ACC3-3A756D392CFC",
-    "mqttHost": "mqtt://[username:password@]192.168.1.5
+	"mqttHost": "mqtt://[username:password@]192.168.1.5
 }
 ```
 

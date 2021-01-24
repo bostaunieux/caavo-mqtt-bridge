@@ -3,7 +3,11 @@
   "version": "0.6.0",
   "description": "Node service for controlling a caavo control center hub",
   "author": "bostaunieux",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bostaunieux/caavo-mqtt-bridge"
+  },
   "dependencies": {
     "axios": "^0.21.1",
     "dotenv": "^8.2.0",
@@ -13,7 +17,7 @@
     "uuid": "^8.3.2"
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=12.0.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.168",
