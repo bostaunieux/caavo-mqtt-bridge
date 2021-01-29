@@ -8,8 +8,9 @@ Create a `config.json` file with the following format:
 
 ```
 {
-    "deviceId": "79A6FB83-2D23-43FD-ACC3-3A756D392CFC",
-	"mqttHost": "mqtt://[username:password@]192.168.1.5
+    "username": "my-username",
+    "password": "my-password",
+    "mqttHost": "mqtt://[username:password@]192.168.1.5
 }
 ```
 
@@ -38,7 +39,6 @@ Then when define the following env vars
 1. Build tag
 	```
 	docker build -t bostaunieux/caavo-mqtt-bridge:latest .
-	docker build -t bostaunieux/caavo-mqtt-bridge:1.1.6 .
 	
 	docker run bostaunieux/caavo-mqtt-bridge:latest
 	```

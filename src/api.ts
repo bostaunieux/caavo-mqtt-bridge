@@ -1,6 +1,8 @@
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
 import { snakeCase } from "lodash";
+
+const UUID_NAMESPACE = "de41f068-cf15-40c9-978d-8c8c33532e55";
 
 const actionMap = {
   vol_up: "IncreaseVolume",
@@ -19,6 +21,16 @@ const actionMap = {
   power_on: "Power",
   power_off: "Power",
 };
+
+interface ApiOptions {
+  username: string;
+  password: string;
+}
+
+interface AuthConfig {
+  token: string;
+  cookie?: string;
+}
 
 type Action = keyof typeof actionMap;
 type InternalAction = typeof actionMap[Action];
@@ -56,6 +68,11 @@ interface RegisterResponse {
   access_token: string;
 }
 
+interface SignInResponse {
+  success: boolean;
+  name: string;
+}
+
 export interface SendCommand {
   action: Action;
   switchId: string;
@@ -76,12 +93,16 @@ export interface HubState {
 }
 
 export default class Api {
+  private username: string;
+  private password: string;
+  private auth: AuthConfig | null;
   private deviceId: string;
-  private accessToken: string | null;
 
-  constructor({ deviceId }: { deviceId: string }) {
-    this.deviceId = deviceId;
-    this.accessToken = null;
+  constructor({ username, password }: ApiOptions) {
+    this.username = username;
+    this.password = password;
+    this.auth = null;
+    this.deviceId = uuidv5(username, UUID_NAMESPACE).toUpperCase();
   }
 
   /**
@@ -131,54 +152,77 @@ export default class Api {
   /**
    * Fetch an access token if one isn't available
    */
-  private async getToken(): Promise<string> {
+  private async getToken(): Promise<AuthConfig> {
     // TODO: need to invalidate old token
     // const now = new Date().getTime();
 
-    if (this.accessToken) {
+    if (this.auth) {
       console.info("Found existing token; using");
-      return this.accessToken;
+      return this.auth;
     }
 
     console.info("No valid stored token found; fetching new token");
 
     try {
-      const accessToken = await this.register();
+      const { token, cookie } = await this.login();
 
       console.info("Received new token");
 
       // store the newly fetched token
-      this.accessToken = accessToken;
+      this.auth = { token, cookie };
 
-      return accessToken;
+      return this.auth;
     } catch (error) {
       throw new Error(`Unable to fetch new token: ${error.message}`);
     }
   }
 
-  private async register(): Promise<string> {
-    const headers = {
-      "User-Agent": "Caavo Olive v11.3",
-      "Content-Type": "application/json",
-    };
-    const requestConfig = { headers };
+  private async login(): Promise<AuthConfig> {
 
-    const response = await axios.post<RegisterResponse>(
+    const requestConfig = {
+      headers: this.getHeaders(),
+    };
+
+    const registerResponse = await axios.post<RegisterResponse>(
       "https://api.caavo.com/clients/register",
       {
-        version: "2.3",
-        new_launch: true,
+        version: "2.5",
         client_type: "ios",
+        new_launch: true,
         device_id: this.deviceId,
       },
       requestConfig
     );
 
-    if (!response || !response.data || !response.data.access_token) {
-      throw new Error(`Invalid token api response; received message: ${response.statusText}`);
+    if (!registerResponse?.data?.access_token || registerResponse?.status !== 200) {
+      throw new Error(`Invalid register response; received message: ${registerResponse.statusText}`);
     }
 
-    return response.data.access_token;
+    const token = registerResponse.data.access_token;
+
+    const signinResponse = await axios.post<SignInResponse>(
+      "https://api.caavo.com/clients/signin",
+      {
+        user: {
+          password: this.password,
+          email: this.username,
+        },
+      },
+      {
+        headers: this.getHeaders({ token }),
+      }
+    );
+
+    const cookie = signinResponse?.headers["set-cookie"] ? String(signinResponse?.headers["set-cookie"]) : null;
+    const caavoCookie = cookie?.match(/_caavo=\w+/)?.[0];
+    if (!caavoCookie) {
+      throw new Error(`Invalid signin response; received message: ${signinResponse.statusText}`);
+    }
+
+    return {
+      token,
+      cookie: caavoCookie,
+    };
   }
 
   /**
@@ -187,14 +231,9 @@ export default class Api {
   private async requestStatus({ switchId }: { switchId: string }): Promise<HubState> {
     console.debug("Requesting switch status");
 
-    const token = await this.getToken();
+    const authConfig = await this.getToken();
 
-    const headers = {
-      Authorization: `Token token=${token}`,
-      "User-Agent": "Caavo Olive v11.3",
-      "Content-Type": "application/json",
-    };
-    const requestConfig = { headers };
+    const requestConfig = { headers: this.getHeaders(authConfig) };
 
     const response = await axios.get<StateResponse>(
       `https://api.caavo.com/clients/switches/state?switch_id=${switchId}`,
@@ -210,14 +249,9 @@ export default class Api {
   private async requestSwitches(): Promise<Switch[]> {
     console.debug("Requesting switch list");
 
-    const token = await this.getToken();
+    const authConfig = await this.getToken();
 
-    const headers = {
-      Authorization: `Token token=${token}`,
-      "User-Agent": "Caavo Olive v11.3",
-      "Content-Type": "application/json",
-    };
-    const requestConfig = { headers };
+    const requestConfig = { headers: this.getHeaders(authConfig) };
 
     const response = await axios.get<SwitchResponse[]>(
       "https://api.caavo.com/clients/switches/box_config/all",
@@ -232,14 +266,10 @@ export default class Api {
    */
   private async requestSendCommand({ switchId, action, longPress }: SendCommandRequest): Promise<void> {
     const requestId = uuidv4().toUpperCase();
-    const token = await this.getToken();
 
-    const headers = {
-      Authorization: `Token token=${token}`,
-      "User-Agent": "Caavo Olive v11.3",
-      "Content-Type": "application/json",
-    };
-    const requestConfig = { headers };
+    const authConfig = await this.getToken();
+
+    const requestConfig = { headers: this.getHeaders(authConfig) };
 
     await axios.post(
       "https://api.caavo.com/control/switches/send_commands",
@@ -249,6 +279,19 @@ export default class Api {
       },
       requestConfig
     );
+  }
+
+  private getHeaders(authConfig?: AuthConfig) {
+    const headers: Record<string, string> = {
+      "User-Agent": "Caavo Olive v2.5.86",
+      "Content-Type": "application/json",
+    };
+
+    authConfig?.cookie && (headers["Cookie"] = authConfig.cookie);
+    authConfig?.token && (headers["Authorization"] = `Token token=${authConfig.token}`);
+
+    console.log(headers);
+    return headers;
   }
 
   /**

@@ -5,7 +5,8 @@ import { promises } from "fs";
 import Api, { SendCommand, HubState, Switch } from "./api";
 
 interface AppConfig {
-  deviceId: string;
+  username: string;
+  password: string;
   mqttHost: string;
 }
 
@@ -18,11 +19,18 @@ const initialize = async () => {
     const buffer = await promises.readFile(CONF_DIR + "/config.json");
     appConfig = JSON.parse(buffer.toString());
   } catch (error) {
-    console.log("Could not read config.json file at path: %s, exiting", CONF_DIR);
+    console.error("Could not read config.json file at path: %s, exiting", CONF_DIR);
     process.exit(1);
   }
 
-  const client = mqtt.connect(appConfig.mqttHost, {
+  const { mqttHost, username, password } = appConfig;
+
+  if (!username || !password || !mqttHost) {
+    console.error("Missing required app configuration");
+    process.exit(1);
+  }
+
+  const client = mqtt.connect(mqttHost, {
     will: {
       topic: "caavo/availability",
       payload: "offline",
@@ -32,7 +40,8 @@ const initialize = async () => {
   });
 
   const api = new Api({
-    deviceId: appConfig.deviceId,
+    username,
+    password,
   });
 
   // reference to any hubs found
