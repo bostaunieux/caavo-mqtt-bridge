@@ -1,96 +1,30 @@
 import axios from "axios";
 import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
 import { snakeCase } from "lodash";
+import {
+  ACTION_MAP,
+  ApiOptions,
+  AuthConfig,
+  HubState,
+  RegisterResponse,
+  SendCommand,
+  SendCommandRequest,
+  SignInResponse,
+  StateResponse,
+  Switch,
+  SwitchResponse,
+} from "./types";
 
+/**
+ * Random UUID to use as base for uuid v5-based device id
+ */
 const UUID_NAMESPACE = "de41f068-cf15-40c9-978d-8c8c33532e55";
+/**
+ * Expire auth token after 6 hours
+ */
+const TOKEN_EXPIRATION_SECONDS = 6 * 60 * 60;
 
-const actionMap = {
-  vol_up: "IncreaseVolume",
-  vol_down: "DecreaseVolume",
-  play: "Play",
-  mute: "Mute",
-  back: "GoBack",
-  home: "DeviceHome",
-  forward: "Forward",
-  rewind: "Rewind",
-  dir_up: "Up",
-  dir_down: "Down",
-  dir_left: "Previous",
-  dir_right: "Next",
-  select: "Select",
-  power_on: "Power",
-  power_off: "Power",
-};
-
-interface ApiOptions {
-  username: string;
-  password: string;
-}
-
-interface AuthConfig {
-  token: string;
-  cookie?: string;
-}
-
-type Action = keyof typeof actionMap;
-type InternalAction = typeof actionMap[Action];
-
-interface SendCommandRequest {
-  action: InternalAction;
-  switchId: string;
-  longPress: boolean;
-}
-
-interface GeneralConfig {
-  name: string;
-  power_state: string;
-}
-
-interface StateResponse {
-  switch_id: string;
-  general_config: GeneralConfig;
-  updated_at: string;
-}
-
-interface SwitchState {
-  mac: string;
-  switchID: string;
-  caavoName: string;
-  powerState: "ON" | "OFF";
-  lastUpdated: string;
-}
-
-interface SwitchResponse {
-  state: SwitchState;
-}
-
-interface RegisterResponse {
-  access_token: string;
-}
-
-interface SignInResponse {
-  success: boolean;
-  name: string;
-}
-
-export interface SendCommand {
-  action: Action;
-  switchId: string;
-}
-
-export interface Switch {
-  id: string;
-  friendlyName: string;
-  name: string;
-  macAddress: string;
-}
-
-export interface HubState {
-  switchId: string;
-  switchName: string;
-  powerState: string;
-  updatedAt: string;
-}
+const CAAVO_APP_USER_AGENT = "Caavo Olive v2.5.86";
 
 export default class Api {
   private username: string;
@@ -102,6 +36,9 @@ export default class Api {
     this.username = username;
     this.password = password;
     this.auth = null;
+    // Generate a v5 uuid based off the username. This ensures it won't change between service restarts.
+    // This will mimic a unique device identifier used with the app
+    // TODO: Make device id seed an optional param to all users to control id generation
     this.deviceId = uuidv5(username, UUID_NAMESPACE).toUpperCase();
   }
 
@@ -122,6 +59,8 @@ export default class Api {
    * Find all available switches
    */
   public async findSwitches(): Promise<Switch[] | null> {
+    console.info("Finding switches");
+
     try {
       return await this.requestSwitches();
     } catch (error) {
@@ -131,12 +70,14 @@ export default class Api {
   }
 
   /**
-   * Send the following action to the provided switch
-   * @param {SnedCommand} param
+   * Send the specified action to the provided switch
+   * @param {SendCommand} param
    */
   public async sendCommand({ action, switchId }: SendCommand): Promise<void> {
+    console.info("Send command '%s' to switch '%s'", action, switchId);
+
     try {
-      const normalizedAction = actionMap[action];
+      const normalizedAction = ACTION_MAP[action];
       const longPress = action === "power_off";
 
       if (!normalizedAction) {
@@ -152,36 +93,36 @@ export default class Api {
   /**
    * Fetch an access token if one isn't available
    */
-  private async getToken(): Promise<AuthConfig> {
-    // TODO: need to invalidate old token
-    // const now = new Date().getTime();
-
+  private async getAuthentication(): Promise<AuthConfig> {
     if (this.auth) {
-      console.info("Found existing token; using");
+      console.info("Using previously fetch auth token");
       return this.auth;
     }
 
-    console.info("No valid stored token found; fetching new token");
+    console.info("Fetching new auth token");
 
     try {
       const { token, cookie } = await this.login();
 
-      console.info("Received new token");
+      console.info("Received new auth token and cookie");
 
       // store the newly fetched token
       this.auth = { token, cookie };
 
+      // set a timer to clear the auth when it expires
+      setTimeout(() => {
+        console.info("Expiring auth token");
+        this.auth = null;
+      }, TOKEN_EXPIRATION_SECONDS * 1000);
+
       return this.auth;
     } catch (error) {
-      throw new Error(`Unable to fetch new token: ${error.message}`);
+      throw new Error(`Failed fetching auth token: ${error.message}`);
     }
   }
 
   private async login(): Promise<AuthConfig> {
-
-    const requestConfig = {
-      headers: this.getHeaders(),
-    };
+    console.debug("Making register device request");
 
     const registerResponse = await axios.post<RegisterResponse>(
       "https://api.caavo.com/clients/register",
@@ -191,15 +132,18 @@ export default class Api {
         new_launch: true,
         device_id: this.deviceId,
       },
-      requestConfig
+      {
+        headers: this.getHeaders(),
+      }
     );
 
-    if (!registerResponse?.data?.access_token || registerResponse?.status !== 200) {
+    if (registerResponse?.status !== 200 || !registerResponse?.data?.access_token) {
       throw new Error(`Invalid register response; received message: ${registerResponse.statusText}`);
     }
 
     const token = registerResponse.data.access_token;
 
+    console.debug("Making sign-in request");
     const signinResponse = await axios.post<SignInResponse>(
       "https://api.caavo.com/clients/signin",
       {
@@ -229,18 +173,16 @@ export default class Api {
    * Fetch hub state
    */
   private async requestStatus({ switchId }: { switchId: string }): Promise<HubState> {
-    console.debug("Requesting switch status");
+    console.debug("Requesting switch status for switch id: %s", switchId);
 
-    const authConfig = await this.getToken();
-
-    const requestConfig = { headers: this.getHeaders(authConfig) };
+    const authConfig = await this.getAuthentication();
 
     const response = await axios.get<StateResponse>(
       `https://api.caavo.com/clients/switches/state?switch_id=${switchId}`,
-      requestConfig
+      { headers: this.getHeaders(authConfig) }
     );
 
-    return this.formatStateResponse(response.data);
+    return Api.formatStateResponse(response.data);
   }
 
   /**
@@ -249,27 +191,24 @@ export default class Api {
   private async requestSwitches(): Promise<Switch[]> {
     console.debug("Requesting switch list");
 
-    const authConfig = await this.getToken();
+    const auth = await this.getAuthentication();
 
-    const requestConfig = { headers: this.getHeaders(authConfig) };
+    const response = await axios.get<SwitchResponse[]>("https://api.caavo.com/clients/switches/box_config/all", {
+      headers: this.getHeaders(auth),
+    });
 
-    const response = await axios.get<SwitchResponse[]>(
-      "https://api.caavo.com/clients/switches/box_config/all",
-      requestConfig
-    );
-
-    return this.formatSwitchResponse(response.data);
+    return Api.formatSwitchResponse(response.data);
   }
 
   /**
    * Send a command for controlled a switch
    */
   private async requestSendCommand({ switchId, action, longPress }: SendCommandRequest): Promise<void> {
+    console.debug("Sending switch command");
+
     const requestId = uuidv4().toUpperCase();
 
-    const authConfig = await this.getToken();
-
-    const requestConfig = { headers: this.getHeaders(authConfig) };
+    const authConfig = await this.getAuthentication();
 
     await axios.post(
       "https://api.caavo.com/control/switches/send_commands",
@@ -277,27 +216,27 @@ export default class Api {
         switch_id: switchId,
         commands: `{"sub_type":"remote_user","source":"olive","request_id":"${requestId}","version":"1.0.0","type":"control","payload":{"command":"control","data":{"op":"${action}","is_long_press":${longPress}}}}`,
       },
-      requestConfig
+      { headers: this.getHeaders(authConfig) }
     );
   }
 
   private getHeaders(authConfig?: AuthConfig) {
     const headers: Record<string, string> = {
-      "User-Agent": "Caavo Olive v2.5.86",
+      "User-Agent": CAAVO_APP_USER_AGENT,
       "Content-Type": "application/json",
     };
 
     authConfig?.cookie && (headers["Cookie"] = authConfig.cookie);
     authConfig?.token && (headers["Authorization"] = `Token token=${authConfig.token}`);
 
-    console.log(headers);
+    console.debug("Generated headers: %s", headers);
     return headers;
   }
 
   /**
    * Format a state response
    */
-  private formatStateResponse(response: StateResponse): HubState {
+  static formatStateResponse(response: StateResponse): HubState {
     return {
       switchId: response.switch_id,
       switchName: response.general_config.name,
@@ -309,7 +248,7 @@ export default class Api {
   /**
    * Format a switch response
    */
-  private formatSwitchResponse(response: SwitchResponse[]): Switch[] {
+  static formatSwitchResponse(response: SwitchResponse[]): Switch[] {
     return (response || []).map((entry) => ({
       id: entry.state.switchID,
       friendlyName: entry.state.caavoName,

@@ -2,7 +2,8 @@ import { throttle, snakeCase } from "lodash";
 import mqtt from "mqtt";
 import { promises } from "fs";
 
-import Api, { SendCommand, HubState, Switch } from "./api";
+import Api from "./api";
+import { SendCommand, HubState, Switch } from "./types";
 
 interface AppConfig {
   username: string;
