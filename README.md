@@ -21,6 +21,64 @@ Then when define the following env vars
 | CONF_DIR  | No	   | Optional directory where the config.json file is located. Defaults to '/config' |
 
 
+## Mqtt integration
+
+This service will listen to messages published from the hub. See the output for specific hubs that get registered. Note hub names will be lowercased, with all spaces replaced with underscores.
+
+Topics to be published include:
+
+### `caavo/{hub_name}/state`
+
+Current state of the caavo device. Note any changes made outside this MQTT service won't automatically be picked up. See the `update_state` topic for manually triggering an update.
+
+Topic payload format:
+```
+{
+	"switchId": "string", // unique identifier for the switch
+	"switchName": "string", // display friendly name for the switch
+	"powerState": "ON | "OFF", // power status
+	"updatedAt": "string" // timestamp of the last update
+}
+```
+
+### `caavo/{hub_name}/update_state`
+
+Trigger an update to the provided hub's state
+
+
+### `caavo/{hub_name}/command`
+
+Send the provided command to the caavo hub
+
+Topic payload format:
+```
+{
+	"action": "action_key"
+}
+```
+Available actions includes:
+
+| Action Key | Description                      |
+| -----------| ---------------------------------
+| vol_up     | Incease volume                   |
+| vol_down   | Decrease volume                  |
+| mute       | Mute sound                       |
+| play       | Play button                      |
+| back       | Go back button                   |
+| home       | Home button                      |
+| forward    | Forward button                   |
+| rewind     | Rewind button                    |
+| dir_up     | Direction up button              |
+| dir_down   | Direction down button            |
+| dir_left   | Direction left / previous button |
+| dir_right  | Direction right / next button    |
+| select     | Select button                    |
+| power_on   | Power on*                        |
+| power_off  | Power off                        |
+
+> \* Power on toggles the power. If the device is on, it will bring up the intermediate power off screen.
+
+
 ## Running the service
 1. Compile 
 	```
