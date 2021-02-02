@@ -10,9 +10,12 @@ Create a `config.json` file with the following format:
 {
     "username": "my-username",
     "password": "my-password",
-    "mqttHost": "mqtt://[username:password@]192.168.1.5
+    "mqttHost": "mqtt://[username:password@]192.168.1.5,
+    "deviceIdSeed": "a valid uuid"
 }
 ```
+
+Note `deviceIdSeed` may be omitted, but if set, it must be a valid UUID. If it isn't, a default UUID will be used.
 
 Then when define the following env vars
 

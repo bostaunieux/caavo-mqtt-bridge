@@ -38,13 +38,21 @@ export default class Api {
     this.username = username;
     this.password = password;
     this.auth = null;
-    // Generate a v5 uuid based off the username. This ensures it won't change between service restarts.
-    // This will mimic a unique device identifier used with the app
-    const seed = deviceIdSeed && uuidValidate(deviceIdSeed) ? deviceIdSeed : DEFAULT_UUID_NAMESPACE;
-    this.deviceId = uuidv5(username, seed).toUpperCase();
 
     this.client = axios.create({ baseURL: "https://api.caavo.com" });
     axiosRetry(this.client, { retries: 5, retryDelay: axiosRetry.exponentialDelay });
+
+    // Generate a v5 uuid based off the username. This ensures it won't change between service restarts.
+    // This will mimic a unique device identifier used with the app
+    let seed = DEFAULT_UUID_NAMESPACE;
+    if (deviceIdSeed) {
+      if (uuidValidate(deviceIdSeed)) {
+        seed = deviceIdSeed;
+      } else {
+        console.warn("Encountered invalidate device id seed uuid: %s, using default uuid", deviceIdSeed);
+      }
+    }
+    this.deviceId = uuidv5(username, seed).toUpperCase();
   }
 
   /**
