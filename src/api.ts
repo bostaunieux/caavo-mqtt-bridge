@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import axiosRetry from "axios-retry";
-import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
+import { v4 as uuidv4, v5 as uuidv5, validate as uuidValidate } from "uuid";
 import { snakeCase } from "lodash";
 import {
   ACTION_MAP,
@@ -19,7 +19,7 @@ import {
 /**
  * Random UUID to use as base for uuid v5-based device id
  */
-const UUID_NAMESPACE = "de41f068-cf15-40c9-978d-8c8c33532e55";
+const DEFAULT_UUID_NAMESPACE = "de41f068-cf15-40c9-978d-8c8c33532e55";
 /**
  * Expire auth token after 6 hours
  */
@@ -34,14 +34,14 @@ export default class Api {
   private deviceId: string;
   private client: AxiosInstance;
 
-  constructor({ username, password }: ApiOptions) {
+  constructor({ username, password, deviceIdSeed }: ApiOptions) {
     this.username = username;
     this.password = password;
     this.auth = null;
     // Generate a v5 uuid based off the username. This ensures it won't change between service restarts.
     // This will mimic a unique device identifier used with the app
-    // TODO: Make device id seed an optional param to all users to control id generation
-    this.deviceId = uuidv5(username, UUID_NAMESPACE).toUpperCase();
+    const seed = deviceIdSeed && uuidValidate(deviceIdSeed) ? deviceIdSeed : DEFAULT_UUID_NAMESPACE;
+    this.deviceId = uuidv5(username, seed).toUpperCase();
 
     this.client = axios.create({ baseURL: "https://api.caavo.com" });
     axiosRetry(this.client, { retries: 5, retryDelay: axiosRetry.exponentialDelay });

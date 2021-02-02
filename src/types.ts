@@ -19,6 +19,7 @@ export const ACTION_MAP = {
 export interface ApiOptions {
   username: string;
   password: string;
+  deviceIdSeed?: string;
 }
 
 export interface AuthConfig {
