@@ -1,4 +1,5 @@
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
+import axiosRetry from "axios-retry";
 import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
 import { snakeCase } from "lodash";
 import {
@@ -31,6 +32,7 @@ export default class Api {
   private password: string;
   private auth: AuthConfig | null;
   private deviceId: string;
+  private client: AxiosInstance;
 
   constructor({ username, password }: ApiOptions) {
     this.username = username;
@@ -40,6 +42,9 @@ export default class Api {
     // This will mimic a unique device identifier used with the app
     // TODO: Make device id seed an optional param to all users to control id generation
     this.deviceId = uuidv5(username, UUID_NAMESPACE).toUpperCase();
+
+    this.client = axios.create({ baseURL: "https://api.caavo.com" });
+    axiosRetry(this.client, { retries: 5, retryDelay: axiosRetry.exponentialDelay });
   }
 
   /**
@@ -124,8 +129,8 @@ export default class Api {
   private async login(): Promise<AuthConfig> {
     console.debug("Making register device request");
 
-    const registerResponse = await axios.post<RegisterResponse>(
-      "https://api.caavo.com/clients/register",
+    const registerResponse = await this.client.post<RegisterResponse>(
+      "/clients/register",
       {
         version: "2.5",
         client_type: "ios",
@@ -144,8 +149,8 @@ export default class Api {
     const token = registerResponse.data.access_token;
 
     console.debug("Making sign-in request");
-    const signinResponse = await axios.post<SignInResponse>(
-      "https://api.caavo.com/clients/signin",
+    const signinResponse = await this.client.post<SignInResponse>(
+      "/clients/signin",
       {
         user: {
           password: this.password,
@@ -177,10 +182,9 @@ export default class Api {
 
     const authConfig = await this.getAuthentication();
 
-    const response = await axios.get<StateResponse>(
-      `https://api.caavo.com/clients/switches/state?switch_id=${switchId}`,
-      { headers: this.getHeaders(authConfig) }
-    );
+    const response = await this.client.get<StateResponse>(`/clients/switches/state?switch_id=${switchId}`, {
+      headers: this.getHeaders(authConfig),
+    });
 
     return Api.formatStateResponse(response.data);
   }
@@ -193,7 +197,7 @@ export default class Api {
 
     const auth = await this.getAuthentication();
 
-    const response = await axios.get<SwitchResponse[]>("https://api.caavo.com/clients/switches/box_config/all", {
+    const response = await this.client.get<SwitchResponse[]>("/clients/switches/box_config/all", {
       headers: this.getHeaders(auth),
     });
 
@@ -210,8 +214,8 @@ export default class Api {
 
     const authConfig = await this.getAuthentication();
 
-    await axios.post(
-      "https://api.caavo.com/control/switches/send_commands",
+    await this.client.post(
+      "/control/switches/send_commands",
       {
         switch_id: switchId,
         commands: `{"sub_type":"remote_user","source":"olive","request_id":"${requestId}","version":"1.0.0","type":"control","payload":{"command":"control","data":{"op":"${action}","is_long_press":${longPress}}}}`,
