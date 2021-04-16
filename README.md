@@ -17,7 +17,7 @@ Create a `config.json` file with the following format:
 
 Note `deviceIdSeed` may be omitted, but if set, it must be a valid UUID. If it isn't, a default UUID will be used.
 
-Then when define the following env vars
+Then define the following env vars
 
 | Variable  | Required | Description      |
 | ----------| -------- | -----------------
