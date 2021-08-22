@@ -11,7 +11,7 @@
   "dependencies": {
     "axios": "^0.21.1",
     "axios-retry": "^3.1.9",
-    "dotenv": "^8.2.0",
+    "dotenv": "^10.0.0",
     "lodash": "^4.17.20",
     "log-timestamp": "^0.3.0",
     "mqtt": "^4.2.6",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.168",
-    "@types/node": "^14.14.19",
+    "@types/node": "^16.7.1",
     "@types/uuid": "^8.3.0",
     "@types/ws": "^7.4.0",
     "@typescript-eslint/eslint-plugin": "^4.11.1",
