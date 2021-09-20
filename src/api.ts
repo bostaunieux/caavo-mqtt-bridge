@@ -129,7 +129,7 @@ export default class Api {
       }, TOKEN_EXPIRATION_SECONDS * 1000);
 
       return this.auth;
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(`Failed fetching auth token: ${error.message}`);
     }
   }
