@@ -1,6 +1,6 @@
 {
   "name": "@bostaunieux/caavo-mqtt-bridge",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Node service for controlling a caavo control center hub",
   "author": "bostaunieux",
   "license": "MIT",
